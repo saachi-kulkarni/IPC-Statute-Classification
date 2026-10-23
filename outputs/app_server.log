@@ -1,0 +1,3 @@
+W1022 17:35:13.401000 50886 torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 5678.78it/s]
+Statute Finder on http://127.0.0.1:7860  (models: inlegalbert_head_512, tfidf_lr)

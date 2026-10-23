@@ -1,0 +1,117 @@
+W1022 17:21:40.796000 37121 torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+{
+ "labels_total": 100,
+ "labels_clean (one_to_one & verified)": 84,
+ "labels_by_mapping_type": {
+  "one_to_one": 84,
+  "modified": 8,
+  "unclear": 4,
+  "repealed": 3,
+  "one_to_many": 1
+ },
+ "labels_unverified": [
+  "143",
+  "427",
+  "294(b)",
+  "376(2)"
+ ],
+ "labels_not_clean": [
+  "13",
+  "143",
+  "161",
+  "164",
+  "320",
+  "363",
+  "366A",
+  "375",
+  "380",
+  "427",
+  "437",
+  "498",
+  "504",
+  "506",
+  "294(b)",
+  "376(2)"
+ ],
+ "test_docs_total": 13039,
+ "test_docs_all_gold_clean": 8272,
+ "test_docs_with_some_ambiguous_gold": 4767,
+ "test_docs_with_no_clean_gold": 147,
+ "test_label_mass_clean": 0.8676,
+ "train_label_mass_clean": 0.8726,
+ "test_label_mass_by_type": {
+  "modified": 0.0442,
+  "one_to_many": 0.0503,
+  "one_to_one": 0.8676,
+  "repealed": 0.0096,
+  "unclear": 0.0282
+ }
+}
+{
+ "best_baseline": {
+  "model": "tfidf_lr",
+  "all_100_ipc_labels": {
+   "micro_f1": 0.6908,
+   "macro_f1": 0.5854
+  },
+  "clean_label_subset (BNS names; identical under IPC names)": {
+   "micro_f1": 0.701,
+   "macro_f1": 0.595
+  },
+  "clean_subset_on_docs_whose_gold_is_all_clean": {
+   "micro_f1": 0.7034,
+   "macro_f1": 0.582
+  },
+  "clean_subset_on_docs_with_some_ambiguous_gold": {
+   "micro_f1": 0.6973,
+   "macro_f1": 0.5769
+  },
+  "n_clean_labels": 84
+ },
+ "best_bert": {
+  "model": "inlegalbert_head_512",
+  "all_100_ipc_labels": {
+   "micro_f1": 0.5205,
+   "macro_f1": 0.4447
+  },
+  "clean_label_subset (BNS names; identical under IPC names)": {
+   "micro_f1": 0.5247,
+   "macro_f1": 0.4574
+  },
+  "clean_subset_on_docs_whose_gold_is_all_clean": {
+   "micro_f1": 0.5282,
+   "macro_f1": 0.4518
+  },
+  "clean_subset_on_docs_with_some_ambiguous_gold": {
+   "micro_f1": 0.5192,
+   "macro_f1": 0.434
+  },
+  "n_clean_labels": 84
+ }
+}
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 5136.66it/s]
+[transformers] [1mBertModel LOAD REPORT[0m from: /Users/shriyansnayak/IPC statute classification project/colab_downloads/inlegalbert_head_512/model
+Key               | Status     |  | 
+------------------+------------+--+-
+classifier.weight | UNEXPECTED |  | 
+classifier.bias   | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+zero-shot: embedding 2000 test docs (all-clean gold, seed 42) on mps ...
+{
+ "status": "ok",
+ "encoder": "colab_downloads/inlegalbert_head_512/model",
+ "pooling": "mean of last layer, cosine",
+ "n_docs": 2000,
+ "doc_selection": "random sample (seed 42) of test docs whose gold labels are all clean-mapped",
+ "ipc_statute_retrieval": {
+  "candidates": 100,
+  "recall@5": 0.2886,
+  "random_recall@5": 0.05,
+  "supervised_classifier_recall@5 (same docs)": 0.6289
+ },
+ "bns_statute_retrieval": {
+  "status": "skipped: provide data/raw/bns_sections.csv (columns section_id,text)"
+ }
+}

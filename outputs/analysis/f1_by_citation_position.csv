@@ -1,0 +1,4 @@
+group,docs,tfidf_lr,inlegalbert_head_512,regex_mention
+named in first ~400 words,8521,0.763,0.5897,0.783
+named only after ~400 words,2060,0.6883,0.431,0.7595
+never named,2458,0.3516,0.3099,0.068

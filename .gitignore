@@ -1,0 +1,30 @@
+# data & large artifacts (keep the small hand-built / fixed files under version control)
+data/*
+!data/processed/
+data/processed/*
+!data/processed/label_list.json
+!data/processed/label_buckets.json
+!data/processed/ipc_to_bns_mapping.csv
+!data/processed/bns_new_offences.csv
+outputs/*.npy
+outputs/**/*.npy
+colab_downloads/
+colab_upload/
+colab_upload.zip
+# environments & caches
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+.cache/
+hf_cache/
+.DS_Store
+# checkpoints / models
+checkpoints/
+checkpoint-*/
+*.pt
+*.bin
+*.safetensors
+smoke_runs/
+*.joblib

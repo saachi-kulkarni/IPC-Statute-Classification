@@ -1,0 +1,16 @@
+,train_docs,F1 tfidf_lr,F1 inlegalbert_head_512,delta (BERT - base),statute (first 70 chars)
+437,577,0.6648501362397821,0.3046683046683047,-0.3601818315714774,Whoever commits mischief to any decked vessel or any vessel of a burde
+465,609,0.5821325648414986,0.30127041742286753,-0.280862147418631,Whoever commits forgery shall be punished with imprisonment of either 
+324,3662,0.7146946564885496,0.44385432473444614,-0.27084033175410344,"Whoever, except in the case provided for by section 334, voluntarily c"
+307,7124,0.7788529620014161,0.5088350785340314,-0.27001788346738465,"Whoever does any act with such intention or knowledge, and under such "
+411,592,0.6592797783933518,0.3929471032745592,-0.26633267511879266,"Whoever dishonestly receives or retains any stolen property, knowing o"
+13,341,0.44534412955465585,0.18181818181818182,-0.26352594773647403,Rep. by the A.O. 1950.
+326,2513,0.6954063604240283,0.4519282998370451,-0.24347806058698318,"Whoever, except in the case provided for by section 335, voluntarily c"
+320,566,0.5095238095238095,0.27722772277227725,-0.23229608675153224,"The following kinds of hurt only are designated as ""grievous"" (First) "
+366A,310,0.46835443037974683,0.2403846153846154,-0.22796981499513144,"Whoever, by any means whatsoever, induces any minor girl under the age"
+341,3186,0.7307882994546356,0.5033467202141901,-0.2274415792404455,Whoever wrongfully restrains any person shall be punished with simple 
+156,665,0.42516268980477223,0.20072992700729927,-0.22443276279747296,Whenever a riot is committed for the benefit or on behalf of any perso
+34,11751,0.7794748124330118,0.5588808622864351,-0.22059395014657668,When a criminal act is done by several persons in furtherance of the c
+155,338,0.3025830258302583,0.08264462809917356,-0.21993839773108476,Whenever a riot is committed for the benefit or on behalf of any perso
+436,437,0.6470588235294118,0.4355300859598854,-0.2115287375695264,"Whoever commits mischief by fire or any explosive substance, intending"
+323,7742,0.7585496497733828,0.5496977837474816,-0.20885186602590122,"Whoever, except in the case provided for by section 334, voluntarily c"

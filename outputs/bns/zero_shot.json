@@ -1,0 +1,16 @@
+{
+ "status": "ok",
+ "encoder": "colab_downloads/inlegalbert_head_512/model",
+ "pooling": "mean of last layer, cosine",
+ "n_docs": 2000,
+ "doc_selection": "random sample (seed 42) of test docs whose gold labels are all clean-mapped",
+ "ipc_statute_retrieval": {
+  "candidates": 100,
+  "recall@5": 0.2886,
+  "random_recall@5": 0.05,
+  "supervised_classifier_recall@5 (same docs)": 0.6289
+ },
+ "bns_statute_retrieval": {
+  "status": "skipped: provide data/raw/bns_sections.csv (columns section_id,text)"
+ }
+}

@@ -1,0 +1,38 @@
+{
+ "keyword": {
+  "family": "baseline",
+  "status": "OK",
+  "problems": [],
+  "dir": "outputs/baselines/keyword"
+ },
+ "regex_mention": {
+  "family": "baseline",
+  "status": "OK",
+  "problems": [],
+  "dir": "outputs/baselines/regex_mention"
+ },
+ "tfidf_lr": {
+  "family": "baseline",
+  "status": "OK",
+  "problems": [],
+  "dir": "outputs/baselines/tfidf_lr"
+ },
+ "bert-base-uncased_head_512": {
+  "family": "bert",
+  "status": "OK",
+  "problems": [],
+  "dir": "colab_downloads/bert-base-uncased_head_512"
+ },
+ "inlegalbert_head_512": {
+  "family": "bert",
+  "status": "OK",
+  "problems": [],
+  "dir": "colab_downloads/inlegalbert_head_512"
+ },
+ "inlegalbert_head_tail_512": {
+  "family": "bert",
+  "status": "OK",
+  "problems": [],
+  "dir": "colab_downloads/inlegalbert_head_tail_512"
+ }
+}

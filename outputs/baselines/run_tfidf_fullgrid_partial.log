@@ -1,0 +1,5 @@
+[      3s] loaded data: train=42835, dev=10200, test=13039
+[      3s] ===== tfidf_lr =====
+[      3s] loading cached word TF-IDF from /Users/shriyansnayak/IPC statute classification project/data/processed/cache/tfidf_word
+[   2431s] tfidf_lr C=0.5: dev µF1=0.6608 MF1=0.5610 (t=0.68) [2424s]
+[   4649s] tfidf_lr C=1.0: dev µF1=0.6846 MF1=0.5774 (t=0.68) [2218s]

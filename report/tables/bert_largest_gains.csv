@@ -1,0 +1,16 @@
+,train_docs,F1 tfidf_lr,F1 inlegalbert_head_512,delta (BERT - base),statute (first 70 chars)
+337,380,0.6016949152542372,0.6083650190114068,0.006670103757169588,Whoever causes hurt to any person by doing any act so rashly or neglig
+308,544,0.6369047619047619,0.6366559485530546,-0.0002488133517072333,Whoever does any act with such intention or knowledge and under such c
+186,684,0.5739130434782609,0.5675675675675675,-0.006345475910693343,Whoever voluntarily obstructs any public servant in the discharge of h
+457,365,0.5434782608695652,0.5363636363636364,-0.007114624505928813,"Whoever commits lurking house-trespass by night, or house-breaking by "
+509,491,0.6024096385542169,0.5907172995780591,-0.011692338976157846,"Whoever, intending to insult the modesty of any woman, utters any word"
+294(b),1139,0.6531027466937945,0.6403242147923,-0.012778531901494583,"(b) sings, recites or utters any obscene song, ballad or words, in or "
+500,377,0.6699507389162561,0.6326530612244898,-0.037297677691766284,Whoever defames another shall be punished with simple imprisonment for
+338,319,0.5154639175257731,0.47183098591549294,-0.0436329316102802,Whoever causes grievous hurt to any person by doing any act so rashly 
+188,528,0.6240601503759399,0.5786163522012578,-0.045443798174682026,"Whoever, knowing that, by an order promulgated by a public servant law"
+279,498,0.7584097859327217,0.7122507122507122,-0.046159073682009444,"Whoever drives any vehicle, or rides, on any public way in a manner so"
+417,486,0.5373134328358209,0.48760330578512395,-0.04971012705069694,Whoever cheats shall be punished with imprisonment of either descripti
+498,564,0.4116222760290557,0.3568627450980392,-0.05475953093101649,Whoever takes or entices away any woman who is and whom he knows or ha
+379,1662,0.6139438085327783,0.5556711758584808,-0.0582726326742975,Whoever commits theft shall be punished with imprisonment of either de
+332,881,0.6059479553903345,0.5469255663430421,-0.0590223890472924,Whoever voluntarily causes hurt to any person being a public servant i
+450,272,0.6181818181818182,0.5588235294117647,-0.05935828877005345,Whoever commits house-trespass in order to the committing of any offen

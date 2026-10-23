@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Statute Finder</title>
+  <meta name="description" content="Research demo: identify applicable IPC sections from case facts, with their BNS counterparts.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+  <script>try { var t = localStorage.getItem("sf-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}</script>
+  <link rel="stylesheet" href="/static/styles.css?v=4">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%2313233f'/%3E%3Cpath d='M32 14v34M20 48h24M14 24h36M20 24l-6 12h12zM44 24l-6 12h12z' stroke='%23c9a24a' stroke-width='3' fill='none' stroke-linejoin='round'/%3E%3C/svg%3E">
+</head>
+<body>
+  <div class="ribbon" role="note">
+    Research demonstration only. Not legal advice. Predictions can be wrong and must not be relied on for any real case.
+  </div>
+
+  <header class="masthead">
+    <div class="masthead-inner">
+      <svg class="emblem" viewBox="0 0 64 64" aria-hidden="true">
+        <circle cx="32" cy="32" r="30" class="emblem-ring"/>
+        <g class="emblem-scales">
+          <path d="M32 13v35"/><path d="M22 49h20"/><path d="M26 52h12"/>
+          <path d="M15 22h34"/><circle cx="32" cy="13" r="2.4"/>
+          <path d="M19 22l-6 13h12z"/><path d="M45 22l-6 13h12z"/>
+          <path d="M12 35a7 3.2 0 0 0 14 0"/><path d="M38 35a7 3.2 0 0 0 14 0"/>
+        </g>
+      </svg>
+      <div>
+        <p class="kicker">Indian Penal Code &middot; Bharatiya Nyaya Sanhita</p>
+        <h1>Statute Finder</h1>
+        <p class="subtitle">Identify the IPC sections a set of case facts engages, and see where each one now sits in the BNS.</p>
+      </div>
+      <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch colour theme"></button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel facts" aria-labelledby="facts-h">
+      <div class="panel-head">
+        <h2 id="facts-h">Statement of Facts</h2>
+        <span class="panel-mark" aria-hidden="true">I</span>
+      </div>
+      <p class="hint">Paste the facts of a criminal case, or load an exhibit drawn from the ILSI test set.</p>
+
+      <div class="exhibits" id="exhibits" role="group" aria-label="Example cases"></div>
+
+      <label class="sr-only" for="facts">Case facts</label>
+      <div class="paper">
+        <textarea id="facts" rows="14" spellcheck="false"
+          placeholder="e.g. On the night of the incident the accused, armed with a knife, entered the house of the deceased…"></textarea>
+      </div>
+      <div class="meta-row">
+        <span id="wordcount">0 words</span>
+        <span class="kbd-hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> to submit</span>
+      </div>
+
+      <fieldset class="models">
+        <legend>Model</legend>
+        <div id="model-options" class="model-options"></div>
+      </fieldset>
+
+      <div class="actions">
+        <button id="submit" class="btn-primary" type="button">
+          <span class="btn-label">Identify applicable sections</span>
+        </button>
+        <button id="clear" class="btn-quiet" type="button">Clear</button>
+      </div>
+      <p id="error" class="error" role="alert" hidden></p>
+    </section>
+
+    <section class="panel findings" aria-labelledby="findings-h">
+      <div class="panel-head">
+        <h2 id="findings-h">Findings</h2>
+        <span class="panel-mark" aria-hidden="true">II</span>
+      </div>
+
+      <div id="empty" class="empty">
+        <svg viewBox="0 0 120 120" aria-hidden="true" class="empty-art">
+          <g transform="rotate(-40 60 52)">
+            <rect x="40" y="28" width="40" height="20" rx="4"/>
+            <path d="M36 32v12M84 32v12"/>
+            <path d="M60 48v42"/>
+          </g>
+          <rect x="66" y="88" width="34" height="9" rx="2"/>
+          <path d="M60 104h50M14 104h34"/>
+        </svg>
+        <p>The findings will appear here once the facts are submitted.</p>
+        <p class="small">Each section is scored independently; a section is marked <em>applies</em> when its score clears that section's own threshold, tuned on the development set.</p>
+      </div>
+
+      <div id="results" hidden aria-live="polite">
+        <div class="verdict">
+          <p class="verdict-label">Sections found to apply</p>
+          <div id="seals" class="seals"></div>
+          <p id="runinfo" class="runinfo"></p>
+        </div>
+        <div id="notices" class="notices"></div>
+        <h3 class="list-head">Ten most likely sections</h3>
+        <ol id="ranked" class="ranked"></ol>
+        <p class="legend">
+          <span class="lg lg-bar"></span> model score
+          <span class="lg lg-tick"></span> this section's threshold
+          <span class="chip chip-ok sm">verified</span> BNS mapping checked against the source table
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="colophon">
+    <p><strong>Not legal advice.</strong> This is a student research prototype trained on judgments from the ILSI dataset (LeSICiN, Paul, Goyal &amp; Ghosh, AAAI 2022). It reads text, not law: it was shown to rely heavily on section numbers already cited in a judgment, and it knows nothing about offences created by the BNS. Consult a qualified advocate for any real matter.</p>
+    <p class="small">IPC → BNS correspondences: checked against the correspondence table compiled at CAPT Bhopal (secondary source, not the official MHA table). Mappings that could not be verified are withheld. Models: fine-tuned InLegalBERT (law-ai) and a TF-IDF + logistic-regression baseline.</p>
+  </footer>
+
+  <script src="/static/app.js?v=4"></script>
+</body>
+</html>

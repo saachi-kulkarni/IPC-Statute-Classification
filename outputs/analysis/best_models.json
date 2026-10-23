@@ -1,0 +1,20 @@
+{
+ "best_baseline": {
+  "model": "tfidf_lr",
+  "thresholds": "per_label",
+  "dir": "outputs/baselines/tfidf_lr",
+  "dev_micro_f1": 0.6994620305485254,
+  "test_micro_f1": 0.6907880847299158,
+  "test_macro_f1": 0.5854186422359732,
+  "selection": "highest DEV micro-F1 over (model, threshold strategy)"
+ },
+ "best_bert": {
+  "model": "inlegalbert_head_512",
+  "thresholds": "per_label",
+  "dir": "colab_downloads/inlegalbert_head_512",
+  "dev_micro_f1": 0.5365044614721199,
+  "test_micro_f1": 0.5204763640782598,
+  "test_macro_f1": 0.44467639334714115,
+  "selection": "highest DEV micro-F1 over (model, threshold strategy)"
+ }
+}

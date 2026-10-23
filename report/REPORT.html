@@ -1,0 +1,1747 @@
+<!doctype html><html lang='en'><head><meta charset='utf-8'><title>IPC Statute Identification: Report</title><style>
+@page { size: A4; margin: 18mm 17mm 20mm 17mm;
+        @bottom-center { content: counter(page); font: 9pt Georgia, serif; color: #6e6656; } }
+@page :first { @bottom-center { content: none; } }
+:root { --ink:#1d2433; --soft:#4a4a52; --muted:#6e6656; --navy:#1e3459; --brass:#8f6c1f; --rule:#d9cbaa; --paper2:#f6f1e6; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { font-family: Georgia, "Times New Roman", serif; font-size: 10.6pt; line-height: 1.5; color: var(--ink); margin: 0; }
+h1, h2, h3 { font-family: Georgia, serif; color: var(--navy); line-height: 1.25; break-after: avoid; }
+h2 { font-size: 15pt; margin: 22pt 0 6pt; padding-bottom: 3pt; border-bottom: 1.5px solid var(--rule); }
+h3 { font-size: 12pt; margin: 14pt 0 4pt; }
+p, li { text-align: justify; hyphens: auto; }
+a { color: var(--navy); }
+code { font-family: Menlo, monospace; font-size: 8.6pt; background: var(--paper2); padding: 0 3px; border-radius: 3px; }
+pre { background: var(--paper2); border: 1px solid var(--rule); border-radius: 4px; padding: 8px 10px; font-size: 8.4pt; break-inside: avoid; }
+pre code { background: none; padding: 0; }
+table { border-collapse: collapse; width: 100%; margin: 6pt 0 12pt; font-size: 8.8pt; break-inside: auto; }
+thead { display: table-header-group; }
+tr { break-inside: avoid; }
+th { background: var(--navy); color: #fff; font-weight: bold; text-align: left; padding: 4px 6px; }
+td { border-bottom: 1px solid #e6dfcf; padding: 3px 6px; vertical-align: top; }
+tbody tr:nth-child(even) td { background: #faf7f0; }
+.small-table table { font-size: 7.6pt; }
+.small-table td, .small-table th { padding: 2px 4px; }
+figure { margin: 10pt 0 14pt; break-inside: avoid; text-align: center; }
+figure img { max-width: 100%; max-height: 112mm; }
+figure.screenshot img { max-height: 150mm; border: 1px solid var(--rule); }
+figcaption { font-size: 9pt; color: var(--soft); margin-top: 4pt; text-align: center; font-style: italic; }
+figcaption b { font-style: normal; color: var(--ink); }
+hr { border: 0; border-top: 1px solid var(--rule); }
+.page-break { break-after: page; }
+.title-page { height: 240mm; display: flex; flex-direction: column; justify-content: center; text-align: center;
+              border-top: 4px double var(--brass); border-bottom: 4px double var(--brass); padding: 0 12mm; }
+.title-page h1 { font-size: 23pt; margin: 0 0 10pt; }
+.title-page h3 { font-weight: normal; font-style: italic; color: var(--soft); margin: 0 0 30pt; font-size: 12.5pt; }
+.title-page p { text-align: center; line-height: 1.9; }
+</style></head><body><div class="title-page">
+
+<h1>Identifying IPC Sections from Indian Case Facts, and the Move to the Bharatiya Nyaya Sanhita</h1>
+<h3>A comparison of lexical and transformer models on the ILSI dataset, with an IPC → BNS transition analysis</h3>
+<p><strong>Submitted by:</strong> [Your name] · [Roll / registration number]<br>
+<strong>Course:</strong> [Course name and code] · <strong>Instructor:</strong> [Instructor name]<br>
+<strong>Institution:</strong> [Institution] · <strong>Date:</strong> [Submission date]</p>
+</div>
+
+<div class="page-break"></div>
+
+<h2>Contents</h2>
+<ol>
+<li>Abstract</li>
+<li>Introduction and problem statement</li>
+<li>Dataset and exploratory analysis</li>
+<li>Methods</li>
+<li>Results</li>
+<li>Analysis</li>
+<li>IPC → BNS transition</li>
+<li>Demo application</li>
+<li>Limitations and ethics</li>
+<li>Conclusion and future work</li>
+<li>References</li>
+</ol>
+<ul>
+<li>Appendix A: Hyperparameters and compute</li>
+<li>Appendix B: Label set with BNS mapping</li>
+<li>Appendix C: BNS provisions with no IPC equivalent</li>
+<li>Appendix D: Reproducibility and file index</li>
+</ul>
+<p><em>Unless stated otherwise, every number is measured on the ILSI <strong>test</strong> set; every hyperparameter, threshold strategy and threshold was chosen on the <strong>dev</strong> set only.</em></p>
+<h2>1. Abstract</h2>
+<p>We predict which Indian Penal Code (IPC) sections apply to an Indian criminal judgment, a multi-label classification task over 100 sections, using the ILSI dataset (about 66,000 judgments). We compare a statute-keyword baseline, TF-IDF with logistic regression, and two fine-tuned BERT models (general-domain bert-base-uncased and the legal-domain InLegalBERT).</p>
+<p><strong>TF-IDF with logistic regression is the best model</strong> (micro-F1 0.691, macro-F1 0.585). It beats the best BERT model, InLegalBERT (0.520 / 0.445), by 17 micro-F1 points (paired bootstrap, p &lt; 0.001). A diagnostic that only extracts &quot;section N&quot; citations from the text scores 0.701 micro-F1 without learning anything: much of ILSI's label signal is section numbers the judgments already cite, which whole-document lexical models exploit and 512-token BERT only partly sees. On the 19% of test judgments that cite no gold section, all models are weak (0.31–0.35) but clearly beat the citation diagnostic (0.07), so they do infer offences from facts.</p>
+<p>We also map the 100 labels to the Bharatiya Nyaya Sanhita (BNS), which replaced the IPC on 1 July 2024: 84 map one-to-one and four unverifiable mappings are withheld. Renumbering, new offences and citation-dependent models mean that relabelling alone will not keep such a system valid. A themed web demo shows predictions together with their BNS counterparts.</p>
+<h2>2. Introduction and problem statement</h2>
+<p>Legal statute identification asks: given the facts or text of a case, which provisions of law apply? For Indian criminal law this has meant sections of the IPC, for example §302 (murder) with §34 (common intention). Automating it could help legal research, case triage and legal aid. It is also a hard multi-label problem:</p>
+<ul>
+<li>documents carry about four sections each;</li>
+<li>sections co-occur strongly (§147/§148/§149 for rioting; §323/§506 for hurt and intimidation);</li>
+<li>frequency is very skewed;</li>
+<li>neighbouring sections differ in fine legal details (weapon used, severity of injury, intention).</li>
+</ul>
+<p><strong>Task.</strong> Given the text of a judgment, output the set of applicable IPC sections from a fixed list of 100.</p>
+<p><strong>Questions.</strong></p>
+<ol>
+<li>How do lexical baselines compare with fine-tuned BERT models, and does legal-domain pre-training help?</li>
+<li>What do the models actually rely on?</li>
+<li>What would it take to keep such a model useful after the switch from the IPC to the BNS?</li>
+</ol>
+<p><strong>Metrics.</strong></p>
+<ul>
+<li><strong>micro-F1</strong>, dominated by frequent sections;</li>
+<li><strong>macro-F1</strong>, every section weighted equally;</li>
+<li>micro precision and recall, samples-F1, and mean per-label F1 in head, mid and tail frequency buckets.</li>
+</ul>
+<h2>3. Dataset and exploratory analysis</h2>
+<p><strong>ILSI</strong> (Indian Legal Statute Identification; Paul, Goyal &amp; Ghosh, AAAI 2022; Zenodo record 6053791) contains Indian court judgments, each labelled with the IPC sections it is linked to, plus the text of the 100 sections. We used the official splits and verified the MD5 checksums of the downloaded files.</p>
+<p><strong>Table 1. Dataset statistics.</strong></p>
+<table>
+<thead>
+<tr>
+  <th></th>
+  <th>Train</th>
+  <th>Dev</th>
+  <th>Test</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Documents</td>
+  <td>42,835</td>
+  <td>10,200</td>
+  <td>13,039</td>
+</tr>
+<tr>
+  <td>Labels per document (mean)</td>
+  <td>3.70</td>
+  <td>3.91</td>
+  <td>3.90</td>
+</tr>
+<tr>
+  <td>Words per document (median / 95th percentile)</td>
+  <td>458 / 4,128</td>
+  <td>579 / 4,486</td>
+  <td>567 / 4,271</td>
+</tr>
+<tr>
+  <td>Documents longer than ~400 words (≈ BERT's 512 tokens)</td>
+  <td>54%</td>
+  <td>60%</td>
+  <td>59%</td>
+</tr>
+</tbody>
+</table>
+<figure><img src="figures/eda_label_frequency.png" alt="Figure 1. Label frequency in training data (log scale); the 15 most frequent sections are named."><figcaption><b>Figure 1.</b> Label frequency in training data (log scale); the 15 most frequent sections are named.</figcaption></figure>
+<p><strong>Imbalance.</strong> §34 occurs in 11,751 training documents, §450 in only 272 (43×). We split labels into tertiles by training frequency:</p>
+<ul>
+<li><strong>head:</strong> 34 labels with 1,329–11,751 documents each, carrying 75% of all label occurrences;</li>
+<li><strong>mid:</strong> 33 labels, 544–1,322 documents;</li>
+<li><strong>tail:</strong> 33 labels, 272–533 documents, 8% of occurrences.</li>
+</ul>
+<p>These buckets are used throughout the analysis.</p>
+<figure><img src="figures/eda_label_buckets.png" alt="Figure 2. Head / mid / tail label buckets."><figcaption><b>Figure 2.</b> Head / mid / tail label buckets.</figcaption></figure>
+<p><strong>Length.</strong> More than half of all documents exceed the ~400 words that fit into BERT's 512-token input, so truncation matters (Figure 3).</p>
+<figure><img src="figures/eda_doc_lengths.png" alt="Figure 3. Document length distribution; the red line marks ~400 words ≈ 512 BERT tokens."><figcaption><b>Figure 3.</b> Document length distribution; the red line marks ~400 words ≈ 512 BERT tokens.</figcaption></figure>
+<p><strong>Co-occurrence.</strong> The strongest pairs are §147 &amp; §148 (Jaccard 0.71), §148 &amp; §149, and §302 &amp; §34 (3,650 training documents).</p>
+<figure><img src="figures/eda_cooccurrence_top20.png" alt="Figure 4. The 20 most frequent co-occurring label pairs."><figcaption><b>Figure 4.</b> The 20 most frequent co-occurring label pairs.</figcaption></figure>
+<p><strong>Data-quality findings.</strong> These matter for how the results should be read:</p>
+<ol>
+<li><strong>Citations are not masked.</strong> A list-aware citation parser finds a gold section cited verbatim (&quot;Section 302 I.P.C.&quot;, &quot;u/s 147, 148, 149&quot;) in <strong>81%</strong> of test documents: within the first ~400 words in 65%, only later in 16%, never in 19%.</li>
+<li><strong>Non-offence and repealed sections are labels.</strong> §2–§5 describe where the Code applies; §13 was repealed in 1950 and §161/§164 in 1988.</li>
+<li><strong>Likely mis-linked citations.</strong> In at least one test judgment, the gold labels §156, §173 and §200 correspond to <em>Code of Criminal Procedure</em> sections cited in the text (&quot;Section 156(3) Cr.P.C.&quot;). Some labels may therefore come from other Acts' citations. This was observed in examples, not measured at scale.</li>
+<li><strong>Near-empty documents.</strong> 0.6% of documents have fewer than 10 words (for example only the judge's name).</li>
+</ol>
+<h2>4. Methods</h2>
+<p>Every model writes the same outputs (dev and test probabilities in one fixed label order, tuned thresholds, metrics), and all of them are scored by a single unit-tested evaluation module, so the results are directly comparable.</p>
+<h3>4.1 Baselines (laptop, Apple M1, 8 GB)</h3>
+<ul>
+<li><strong>Keyword.</strong> TF-IDF over the 100 statute texts (stop words and numbers removed). Each section keeps its top-<em>k</em> distinctive terms (<em>k</em> = 5, chosen on dev from {5, 10, 15, 25}). A document's score for a section is the weighted share of those terms it contains. No training documents are used.</li>
+<li><strong>TF-IDF + logistic regression.</strong> Word 1–2-gram TF-IDF (100,000 features, sublinear term frequency, min_df 3, max_df 0.9) with one-vs-rest logistic regression (liblinear, class-balanced weights). The regularisation strength was chosen on dev: C = 1 (dev micro-F1 0.685) over C = 0.5 (0.661). The planned C ∈ {4, 10} and a linear-SVM variant were dropped because each C value needed about 40 minutes on the laptop.</li>
+<li><strong>Citation diagnostic.</strong> Predicts §N whenever the text cites &quot;section N&quot; or &quot;N IPC&quot;. It is not a model; it measures how much of the task can be solved by reading citations.</li>
+</ul>
+<h3>4.2 BERT models (Google Colab, NVIDIA A100)</h3>
+<ul>
+<li><strong>Encoders.</strong> <code>bert-base-uncased</code> and <code>law-ai/InLegalBERT</code> (LegalBERT further pre-trained on Indian court judgments; Paul et al., 2023). Each gets a 100-way sigmoid output layer.</li>
+<li><strong>Training.</strong> 4 epochs, learning rate 2·10⁻⁵ with 10% warm-up and linear decay, batch 16 × gradient accumulation 2, weight decay 0.01, mixed precision, seed 42. The epoch with the best dev micro-F1 (at threshold 0.5) is kept. Each run took about 13 minutes.</li>
+<li><strong>Truncation.</strong> <em>head</em> keeps the first 510 tokens. <em>head+tail</em> keeps the first 128 and the last 382, because judgments often end with the operative order.</li>
+<li><strong>Class imbalance.</strong> Binary cross-entropy with a per-label positive weight = negatives / positives, clipped to [1, 30] (67 of the 100 labels hit the cap).</li>
+<li><strong>Validation before GPU use.</strong> The training notebook was run end-to-end on the laptop with a tiny BERT model first. This found and fixed a crash in head+tail tokenisation.</li>
+</ul>
+<h3>4.3 Thresholding</h3>
+<p>Three strategies are evaluated, all tuned on dev:</p>
+<ul>
+<li>a fixed threshold of 0.5;</li>
+<li>one global threshold (0.05–0.95, step 0.01) maximising micro-F1;</li>
+<li>per-label thresholds maximising each label's F1, falling back to the global threshold for labels with fewer than 5 dev positives.</li>
+</ul>
+<p>A document with no predicted label receives its single most likely label. Each model is reported at the strategy with the highest <em>dev</em> micro-F1, which was per-label for every learned model.</p>
+<h2>5. Results</h2>
+<p><strong>Table 2. Main results</strong> (test set; each model at its dev-selected threshold strategy; the citation diagnostic is shown for reference).</p>
+<table>
+<thead>
+<tr>
+  <th>Model</th>
+  <th>Thresholds</th>
+  <th>Micro-F1</th>
+  <th>Macro-F1</th>
+  <th>Micro-P</th>
+  <th>Micro-R</th>
+  <th>Samples-F1</th>
+  <th>Head F1</th>
+  <th>Mid F1</th>
+  <th>Tail F1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Keyword (statute terms)</td>
+  <td>global</td>
+  <td>0.176</td>
+  <td>0.107</td>
+  <td>0.162</td>
+  <td>0.191</td>
+  <td>0.131</td>
+  <td>0.176</td>
+  <td>0.083</td>
+  <td>0.061</td>
+</tr>
+<tr>
+  <td><em>Citation diagnostic</em></td>
+  <td>—</td>
+  <td><em>0.701</em></td>
+  <td><em>0.627</em></td>
+  <td><em>0.703</em></td>
+  <td><em>0.699</em></td>
+  <td><em>0.640</em></td>
+  <td><em>0.759</em></td>
+  <td><em>0.621</em></td>
+  <td><em>0.497</em></td>
+</tr>
+<tr>
+  <td><strong>TF-IDF + LR</strong></td>
+  <td>per-label</td>
+  <td><strong>0.691</strong></td>
+  <td><strong>0.585</strong></td>
+  <td>0.707</td>
+  <td>0.675</td>
+  <td><strong>0.654</strong></td>
+  <td>0.708</td>
+  <td>0.582</td>
+  <td>0.463</td>
+</tr>
+<tr>
+  <td>BERT-base, head</td>
+  <td>per-label</td>
+  <td>0.497</td>
+  <td>0.417</td>
+  <td>0.429</td>
+  <td>0.590</td>
+  <td>0.482</td>
+  <td>0.546</td>
+  <td>0.409</td>
+  <td>0.293</td>
+</tr>
+<tr>
+  <td>InLegalBERT, head</td>
+  <td>per-label</td>
+  <td>0.520</td>
+  <td>0.445</td>
+  <td>0.466</td>
+  <td>0.589</td>
+  <td>0.500</td>
+  <td>0.557</td>
+  <td>0.438</td>
+  <td>0.336</td>
+</tr>
+<tr>
+  <td>InLegalBERT, head+tail</td>
+  <td>per-label</td>
+  <td>0.511</td>
+  <td>0.436</td>
+  <td>0.458</td>
+  <td>0.578</td>
+  <td>0.495</td>
+  <td>0.550</td>
+  <td>0.424</td>
+  <td>0.329</td>
+</tr>
+</tbody>
+</table>
+<p>All threshold strategies for every model are in <code>tables/results_all_strategies.csv</code>.</p>
+<figure><img src="figures/fig_results_overview.png" alt="Figure 5. Test micro-F1 (filled) and macro-F1 (hollow) for every model."><figcaption><b>Figure 5.</b> Test micro-F1 (filled) and macro-F1 (hollow) for every model.</figcaption></figure>
+<p><strong>Thresholds matter</strong>, especially for BERT (Figure 6). The class weighting pushes BERT's probabilities up, so at 0.5 InLegalBERT reaches only 0.394 micro-F1 (precision 0.26). A tuned global threshold (0.77) gives 0.504 and per-label thresholds give 0.520. For TF-IDF the steps are 0.647 → 0.682 → 0.691.</p>
+<figure><img src="figures/fig_thresholds.png" alt="Figure 6. Effect of the threshold strategy on test micro-F1."><figcaption><b>Figure 6.</b> Effect of the threshold strategy on test micro-F1.</figcaption></figure>
+<p><strong>Legal pre-training helps:</strong> InLegalBERT beats bert-base-uncased by +2.4 micro-F1 and +2.7 macro-F1, with the largest gain on tail labels (+0.04). <strong>Head+tail truncation did not help</strong> (−0.9 micro-F1). Training was stable, and two of the three runs were still improving slightly at epoch 4 (Figure 7).</p>
+<figure><img src="figures/fig_training_curves.png" alt="Figure 7. Training loss (top) and dev micro-F1 at threshold 0.5 (bottom) per epoch; the circled epoch was kept."><figcaption><b>Figure 7.</b> Training loss (top) and dev micro-F1 at threshold 0.5 (bottom) per epoch; the circled epoch was kept.</figcaption></figure>
+<h2>6. Analysis</h2>
+<h3>6.1 Label frequency</h3>
+<p>The ranking of models is identical in every frequency bucket, and the learned models lose 0.22–0.26 F1 from head to tail labels (Figure 8, Table 3). BERT's gap to TF-IDF is roughly constant (−0.15 head, −0.14 mid, −0.13 tail), so BERT is not specifically better on rare labels. Per-label F1 correlates with log training frequency (Pearson r = 0.63 for TF-IDF, 0.52 for InLegalBERT, Figure 9). For both models the hardest labels are the non-offence sections §2, §3 and §4.</p>
+<figure><img src="figures/fig_buckets.png" alt="Figure 8. Mean per-label test F1 by frequency bucket."><figcaption><b>Figure 8.</b> Mean per-label test F1 by frequency bucket.</figcaption></figure>
+<p><strong>Table 3. Mean per-label F1 by bucket.</strong></p>
+<table>
+<thead>
+<tr>
+  <th>Model</th>
+  <th>Head F1</th>
+  <th>Mid F1</th>
+  <th>Tail F1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>TF-IDF + LR</td>
+  <td>0.708</td>
+  <td>0.582</td>
+  <td>0.463</td>
+</tr>
+<tr>
+  <td>InLegalBERT (head)</td>
+  <td>0.557</td>
+  <td>0.438</td>
+  <td>0.336</td>
+</tr>
+<tr>
+  <td>Citation diagnostic</td>
+  <td>0.759</td>
+  <td>0.621</td>
+  <td>0.497</td>
+</tr>
+<tr>
+  <td>BERT-base (head)</td>
+  <td>0.546</td>
+  <td>0.409</td>
+  <td>0.293</td>
+</tr>
+<tr>
+  <td>InLegalBERT (head+tail)</td>
+  <td>0.550</td>
+  <td>0.424</td>
+  <td>0.329</td>
+</tr>
+<tr>
+  <td>Keyword</td>
+  <td>0.176</td>
+  <td>0.083</td>
+  <td>0.061</td>
+</tr>
+</tbody>
+</table>
+<figure><img src="figures/fig_f1_vs_frequency.png" alt="Figure 9. Per-label test F1 against the number of training documents (log scale)."><figcaption><b>Figure 9.</b> Per-label test F1 against the number of training documents (log scale).</figcaption></figure>
+<p>InLegalBERT matches or beats TF-IDF on only <strong>1 of 100 labels</strong> (§337, +0.007). Its largest losses (−0.21 to −0.36 F1) are §437, §465, §324, §307, §326 and §34: sections where the cited number is strong evidence and neighbouring sections read alike in prose. Full per-label scores are in <code>tables/per_label_f1.csv</code>.</p>
+<h3>6.2 Confusions between related sections</h3>
+<p>Errors concentrate in legally adjacent, often co-charged families, and InLegalBERT makes them 3–4× more often than TF-IDF (Figure 10):</p>
+<ul>
+<li>§34 is falsely added when §302, §307 or §149 is the true section (41% of §149 documents for BERT, 13% for TF-IDF);</li>
+<li>BERT mixes up the murder ladder §302/§304/§307;</li>
+<li>BERT mixes up the hurt ladder §323/§324/§325 (§324 is predicted in 15% of §323 documents, against 2% for TF-IDF).</li>
+</ul>
+<p>Rioting (§147/§148/§149) and cheating vs criminal breach of trust (§420/§406) are confused less often (BERT 8–17%).</p>
+<figure><img src="figures/fig_confusions.png" alt="Figure 10. Share of documents with a given true section (column) in which a related section (row) is falsely predicted."><figcaption><b>Figure 10.</b> Share of documents with a given true section (column) in which a related section (row) is falsely predicted.</figcaption></figure>
+<h3>6.3 Why BERT trails: where the citations are</h3>
+<p>Splitting the test set by where a gold section is first cited explains most of the gap (Figure 11, Table 4):</p>
+<ol>
+<li><strong>Truncation.</strong> Late citations are invisible to BERT, and its micro-F1 drops from 0.59 to 0.43, while TF-IDF reads the whole document (0.76 → 0.69).</li>
+<li><strong>Citation copying.</strong> Even when the citation is inside its window, BERT does not reliably &quot;copy&quot; it (0.59 vs 0.78 for the regex).</li>
+<li><strong>Facts only.</strong> Without any citation, every model is weak, but both learned models clearly beat the regex (0.35 and 0.31 vs 0.07). This subset is closest to the intended task of inferring statutes from facts.</li>
+</ol>
+<figure><img src="figures/fig_citation_position.png" alt="Figure 11. Test micro-F1 split by where a gold section is first cited in the judgment."><figcaption><b>Figure 11.</b> Test micro-F1 split by where a gold section is first cited in the judgment.</figcaption></figure>
+<p><strong>Table 4. Micro-F1 by citation position.</strong></p>
+<table>
+<thead>
+<tr>
+  <th>Documents where a gold section is…</th>
+  <th>Docs</th>
+  <th>TF-IDF + LR</th>
+  <th>InLegalBERT (head)</th>
+  <th>Citation diagnostic</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>named in first ~400 words</td>
+  <td>8521</td>
+  <td>0.763</td>
+  <td>0.590</td>
+  <td>0.783</td>
+</tr>
+<tr>
+  <td>named only after ~400 words</td>
+  <td>2060</td>
+  <td>0.688</td>
+  <td>0.431</td>
+  <td>0.759</td>
+</tr>
+<tr>
+  <td>never named</td>
+  <td>2458</td>
+  <td>0.352</td>
+  <td>0.310</td>
+  <td>0.068</td>
+</tr>
+</tbody>
+</table>
+<h3>6.4 Error cases</h3>
+<p>370 test documents have document-level F1 ≥ 0.75 for TF-IDF and ≤ 0.25 for BERT; only 32 show the reverse. Eight of each were sampled at random (seed 42) and read in full; per-case comments are in the analysis notebook (<code>notebooks/02_analysis.ipynb</code>).</p>
+<ul>
+<li><strong>BERT fails, TF-IDF succeeds.</strong> Five of eight are long judgments whose relevant citations sit beyond the 510-token window, or whose opening is procedural (a service-law writ, a correction application). In the rest, BERT predicts a semantically related cluster instead of the cited sections, e.g. §229A (bail-jumping) for a bail order that cites §§363/366/376/506 in its first 40 words.</li>
+<li><strong>TF-IDF fails, BERT succeeds.</strong> All eight are short (131–432 words) and seven contain no citation. BERT infers the offence from the narrative: §302 from &quot;sentenced to suffer imprisonment for life&quot;, the rioting trio from &quot;five appellants&quot;, and bail-jumping from a bail-application context.</li>
+</ul>
+<h3>6.5 Statistical significance</h3>
+<p><strong>Table 5. Paired bootstrap</strong> over test documents (1,000 resamples, seed 42; 95% confidence intervals).</p>
+<table>
+<thead>
+<tr>
+  <th>Metric</th>
+  <th>TF-IDF + LR [95% CI]</th>
+  <th>InLegalBERT [95% CI]</th>
+  <th>Difference [95% CI]</th>
+  <th>p (two-sided)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>micro-f1</td>
+  <td>0.691 [0.6857, 0.696]</td>
+  <td>0.520 [0.5155, 0.5249]</td>
+  <td>-0.170 [-0.1747, -0.1659]</td>
+  <td>&lt; 0.001</td>
+</tr>
+<tr>
+  <td>macro-f1</td>
+  <td>0.585 [0.5779, 0.5917]</td>
+  <td>0.445 [0.4379, 0.4502]</td>
+  <td>-0.141 [-0.1469, -0.134]</td>
+  <td>&lt; 0.001</td>
+</tr>
+</tbody>
+</table>
+<p>The difference is large and significant: no resample favoured BERT. This captures sampling variation in the test set, not training variance, because each BERT configuration was trained once.</p>
+<h2>7. IPC → BNS transition</h2>
+<p><em>The full discussion is in <code>bns_discussion.md</code>; the mapping is in <code>tables/ipc_to_bns_mapping.csv</code>.</em></p>
+<p><strong>Building the mapping.</strong> An official MHA/BPR&amp;D correspondence table could not be accessed. Each of the 100 labels was checked row by row against a correspondence table compiled by the Director of CAPT Bhopal (a secondary source, cited in every row).</p>
+<ul>
+<li>96 rows are confirmed by the source (or, for the three repealed sections, by ILSI's own statute text).</li>
+<li>For the remaining 4 (IPC 143, 427, 294(b), 376(2)) no BNS section could be verified, so their mapping is <strong>withheld</strong> rather than guessed.</li>
+</ul>
+<p><strong>Coverage</strong> (Figure 12, Table 6):</p>
+<ul>
+<li>84 labels map one-to-one, carrying 86.8% of test label occurrences.</li>
+<li>8 changed in scope (e.g. grievous hurt's 20-day threshold became 15 days); §506 splits into BNS 351(2) and 351(3); 3 were repealed long before the BNS.</li>
+<li>Because documents carry about four labels, only <strong>63.4%</strong> of test documents map cleanly in full.</li>
+<li>One-to-one relabelling leaves F1 unchanged by construction (TF-IDF 0.701, InLegalBERT 0.525 on the clean labels). It renames outputs and fixes nothing else.</li>
+</ul>
+<figure><img src="figures/fig_bns_coverage.png" alt="Figure 12. IPC → BNS mapping types, as a share of labels and of test label occurrences."><figcaption><b>Figure 12.</b> IPC → BNS mapping types, as a share of labels and of test label occurrences.</figcaption></figure>
+<p><strong>Table 6. Mapping coverage.</strong></p>
+<table>
+<thead>
+<tr>
+  <th>Mapping type</th>
+  <th>Labels</th>
+  <th>Share of test label occurrences</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>one-to-one</td>
+  <td>84</td>
+  <td>0.868</td>
+</tr>
+<tr>
+  <td>scope changed</td>
+  <td>8</td>
+  <td>0.044</td>
+</tr>
+<tr>
+  <td>split</td>
+  <td>1</td>
+  <td>0.050</td>
+</tr>
+<tr>
+  <td>repealed</td>
+  <td>3</td>
+  <td>0.010</td>
+</tr>
+<tr>
+  <td>withheld (unverifiable)</td>
+  <td>4</td>
+  <td>0.028</td>
+</tr>
+</tbody>
+</table>
+<p><strong>What breaks.</strong></p>
+<ul>
+<li><strong>New offences have no training data:</strong> organised crime (BNS 111), terrorist act (113), snatching (304), mob lynching (103(2)), false promise of marriage (69) and others (Appendix C).</li>
+<li><strong>The models read citations, and the numbers now mean different things.</strong> For 95 of 100 labels, the TF-IDF model's five strongest features include the section's own number. Under the BNS: BNS 302 punishes hurting religious feelings, BNS 304 is snatching, BNS 307 is a theft offence. A model trained on IPC judgments will misfire on BNS-era text.</li>
+<li><strong>Both codes run in parallel.</strong> Offences committed before 1 July 2024 continue under the IPC, so a deployed system must handle both codes for years. Meanwhile BNS-era reported judgments will remain scarce.</li>
+</ul>
+<p><strong>Update strategies.</strong></p>
+<ol>
+<li><strong>Deterministic relabelling,</strong> applied on inputs with section numbers masked.</li>
+<li><strong>Fine-tuning on BNS judgments</strong> as they accumulate, with a dual IPC/BNS label space.</li>
+<li><strong>Retrieval against statute text,</strong> which needs only the statute's text for a new offence. As a calibration, the fine-tuned InLegalBERT encoder matching case facts to the 100 IPC statute texts reaches recall@5 = 0.29, against 0.05 for random ranking and 0.63 for the supervised classifier (Figure 13). The same experiment against BNS texts is implemented but was not run, because no reliable machine-readable BNS text was available.</li>
+</ol>
+<figure><img src="figures/fig_zero_shot.png" alt="Figure 13. Retrieving statutes by text similarity (recall@5, 2,000 test documents)."><figcaption><b>Figure 13.</b> Retrieving statutes by text similarity (recall@5, 2,000 test documents).</figcaption></figure>
+<h2>8. Demo application</h2>
+<p>A local web application, <em>Statute Finder</em>, demonstrates the models (FastAPI back end; hand-built HTML/CSS/JS front end with a law-library theme in dark and light variants).</p>
+<ul>
+<li><strong>Input:</strong> paste case facts, or load one of three &quot;exhibits&quot; drawn from the test set.</li>
+<li><strong>Model choice:</strong> fine-tuned InLegalBERT (default) or TF-IDF + LR, each shown with its test scores.</li>
+<li><strong>Output:</strong> the ten most likely sections, each with its score bar and its own dev-tuned threshold, an &quot;Applies&quot; stamp when the threshold is cleared, and its BNS counterpart marked <em>verified</em>, <em>split</em>, <em>scope changed</em>, <em>withheld</em> or <em>repealed</em>.</li>
+<li><strong>Warnings:</strong> sections already cited in the input are flagged, because the models lean on them. A &quot;not legal advice&quot; disclaimer is shown at the top and bottom of the page.</li>
+</ul>
+<figure class="screenshot"><img src="figures/app_results_dark.png" alt="Figure 14. The demo application (dark theme) on a test-set exhibit: InLegalBERT recovers all three recorded sections and shows their BNS status."><figcaption><b>Figure 14.</b> The demo application (dark theme) on a test-set exhibit: InLegalBERT recovers all three recorded sections and shows their BNS status.</figcaption></figure>
+<figure class="screenshot"><img src="figures/app_results_light.png" alt="Figure 15. The same view in the light theme."><figcaption><b>Figure 15.</b> The same view in the light theme.</figcaption></figure>
+<h2>9. Limitations and ethics</h2>
+<p><strong>Limitations</strong></p>
+<ul>
+<li><strong>Benchmark leakage.</strong> ILSI labels can largely be recovered from citations in the text, so headline scores overstate how well any model infers law from facts. The &quot;never cited&quot; subset (19% of test) is the more honest measure.</li>
+<li><strong>Label noise.</strong> Non-offence sections, repealed sections and apparently mis-linked CrPC citations appear as labels, so some &quot;errors&quot; are label errors.</li>
+<li><strong>Reduced search.</strong> One training seed per BERT configuration, a reduced regularisation grid, no SVM or character n-gram model, and 512-token truncation. Small differences such as head vs head+tail (−0.9 points) are within what seed variance could explain; this was not measured.</li>
+<li><strong>Possible pre-training overlap (unverified).</strong> InLegalBERT was pre-trained on Indian Supreme Court and High Court judgments from 1950–2019, which may include ILSI test judgments.</li>
+<li><strong>Mapping source.</strong> The BNS mapping rests on a secondary source; &quot;verified&quot; means checked against that table, not against an official government publication.</li>
+</ul>
+<p><strong>Ethics</strong></p>
+<ul>
+<li><strong>Not legal advice.</strong> The demo says so prominently, shows the mapping status, and warns when predictions may only echo citations.</li>
+<li><strong>Automation bias.</strong> Statute suggestions can anchor investigators, lawyers or judges. A model trained on past charging and judicial practice reproduces its patterns, including any over-charging or bias across communities. It should support human review, never replace it.</li>
+<li><strong>Privacy.</strong> Judgments are public but name parties, victims and witnesses. The data should be used for research only and not re-published in identifying form.</li>
+<li><strong>The law has changed.</strong> After 1 July 2024, an IPC-only model is wrong for new offences by construction (Section 7).</li>
+</ul>
+<h2>10. Conclusion and future work</h2>
+<p>On ILSI, a well-tuned TF-IDF + logistic regression model beats fine-tuned BERT models by a large, significant margin. The analysis shows why: most judgments cite their own answer, whole-document lexical models read those citations, and 512-token BERT models see only some of them and do not reliably copy the ones they see. Where no citation exists, the problem is genuinely hard for all models. Legal-domain pre-training (InLegalBERT) helps modestly, especially for rare sections. The move to the BNS makes citation-based models fragile, because section numbers change meaning and new offences have no training data.</p>
+<p><strong>Future work</strong></p>
+<ol>
+<li><strong>Mask section numbers</strong> and other Acts' citations in training and test text, so models are evaluated on facts → offence. This is the most important follow-up.</li>
+<li><strong>Longer context:</strong> hierarchical or long-document legal encoders, or chunk-and-aggregate BERT, to lift the 512-token limit.</li>
+<li><strong>Robustness:</strong> multiple seeds with confidence intervals over training runs; the full regularisation grid and SVM baselines.</li>
+<li><strong>Label cleaning:</strong> remove non-offence and repealed sections, and filter citations from other Acts.</li>
+<li><strong>Statute-aware methods:</strong> retrieval and graph methods that use statute text (as LeSICiN does), and the BNS zero-shot experiment once BNS texts are available.</li>
+<li><strong>A dual IPC/BNS model,</strong> fine-tuned on BNS-era judgments as they appear.</li>
+</ol>
+<h2>11. References</h2>
+<ol>
+<li>S. Paul, P. Goyal, S. Ghosh. <em>LeSICiN: A Heterogeneous Graph-based Approach for Automatic Legal Statute Identification from Indian Legal Documents.</em> Proceedings of AAAI 2022. Dataset: Zenodo, doi:10.5281/zenodo.6053791.</li>
+<li>S. Paul, A. Mandal, P. Goyal, S. Ghosh. <em>Pre-trained Language Models for the Legal Domain: A Case Study on Indian Law.</em> Proceedings of ICAIL 2023; arXiv:2209.06049. Model: huggingface.co/law-ai/InLegalBERT.</li>
+<li>J. Devlin, M.-W. Chang, K. Lee, K. Toutanova. <em>BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding.</em> NAACL 2019.</li>
+<li><em>The Bharatiya Nyaya Sanhita, 2023</em> (Act No. 45 of 2023), in force from 1 July 2024. India Code: indiacode.nic.in/handle/123456789/20062.</li>
+<li>A.K. Yadav (Director, CAPT Bhopal). <em>Correspondence Table and Comparison Summary of the Bharatiya Nyaya Sanhita, 2023 to the Indian Penal Code, 1860.</em> keralaprisons.gov.in/userfiles/act-and-rules/comparison_summary_BNS_to_IPC.pdf (secondary source).</li>
+</ol>
+<div class="page-break"></div>
+
+<h2>Appendix A: Hyperparameters and compute</h2>
+<table>
+<thead>
+<tr>
+  <th>Component</th>
+  <th>Setting</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Data split</td>
+  <td>Official ILSI train / dev / test (42,835 / 10,200 / 13,039)</td>
+</tr>
+<tr>
+  <td>Keyword baseline</td>
+  <td>Statute-text TF-IDF, English stop words, alphabetic tokens; top-k = 5 (dev-selected from 5/10/15/25)</td>
+</tr>
+<tr>
+  <td>TF-IDF features</td>
+  <td>word 1–2-grams, max 100,000 features, sublinear tf, min_df 3, max_df 0.9, float32</td>
+</tr>
+<tr>
+  <td>Logistic regression</td>
+  <td>one-vs-rest, liblinear, class_weight = balanced, C = 1 (dev-selected from 0.5/1), 4 threads</td>
+</tr>
+<tr>
+  <td>BERT encoders</td>
+  <td>bert-base-uncased; law-ai/InLegalBERT</td>
+</tr>
+<tr>
+  <td>Sequence length</td>
+  <td>512 tokens; head (510) or head+tail (128 + 382)</td>
+</tr>
+<tr>
+  <td>Optimisation</td>
+  <td>AdamW, lr 2e-5, linear schedule, 10% warm-up, weight decay 0.01, 4 epochs, fp16</td>
+</tr>
+<tr>
+  <td>Batch</td>
+  <td>16 per step × 2 gradient accumulation = 32</td>
+</tr>
+<tr>
+  <td>Loss</td>
+  <td>BCE with logits, pos_weight = neg/pos clipped to [1, 30]</td>
+</tr>
+<tr>
+  <td>Model selection</td>
+  <td>best epoch by dev micro-F1 at 0.5</td>
+</tr>
+<tr>
+  <td>Thresholds</td>
+  <td>fixed 0.5; global grid 0.05–0.95 step 0.01; per-label (≥ 5 dev positives)</td>
+</tr>
+<tr>
+  <td>Seeds</td>
+  <td>42 everywhere</td>
+</tr>
+<tr>
+  <td>Compute</td>
+  <td>Baselines: Apple M1 (8 GB RAM), TF-IDF LR ≈ 30 min. BERT: Colab NVIDIA A100 40 GB, ≈ 13 min per run</td>
+</tr>
+<tr>
+  <td>Software</td>
+  <td>Python 3.11, PyTorch 2.14 (Mac) / 2.11 (Colab), transformers 5.20.2, datasets 5.1.0, scikit-learn 1.9.1</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Table A1. BERT training log per epoch.</strong></p>
+<table>
+<thead>
+<tr>
+  <th>Run</th>
+  <th>Epoch</th>
+  <th>Train loss</th>
+  <th>Dev loss</th>
+  <th>Dev micro-F1 @0.5</th>
+  <th>Dev macro-F1 @0.5</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>InLegalBERT (head)</td>
+  <td>1</td>
+  <td>0.847</td>
+  <td>0.676</td>
+  <td>0.327</td>
+  <td>0.254</td>
+</tr>
+<tr>
+  <td>InLegalBERT (head)</td>
+  <td>2</td>
+  <td>0.592</td>
+  <td>0.598</td>
+  <td>0.379</td>
+  <td>0.306</td>
+</tr>
+<tr>
+  <td>InLegalBERT (head)</td>
+  <td>3</td>
+  <td>0.519</td>
+  <td>0.573</td>
+  <td>0.399</td>
+  <td>0.326</td>
+</tr>
+<tr>
+  <td>InLegalBERT (head)</td>
+  <td>4</td>
+  <td>0.481</td>
+  <td>0.564</td>
+  <td>0.396</td>
+  <td>0.324</td>
+</tr>
+<tr>
+  <td>BERT-base (head)</td>
+  <td>1</td>
+  <td>0.856</td>
+  <td>0.705</td>
+  <td>0.315</td>
+  <td>0.242</td>
+</tr>
+<tr>
+  <td>BERT-base (head)</td>
+  <td>2</td>
+  <td>0.612</td>
+  <td>0.616</td>
+  <td>0.349</td>
+  <td>0.275</td>
+</tr>
+<tr>
+  <td>BERT-base (head)</td>
+  <td>3</td>
+  <td>0.536</td>
+  <td>0.588</td>
+  <td>0.369</td>
+  <td>0.294</td>
+</tr>
+<tr>
+  <td>BERT-base (head)</td>
+  <td>4</td>
+  <td>0.496</td>
+  <td>0.583</td>
+  <td>0.371</td>
+  <td>0.297</td>
+</tr>
+<tr>
+  <td>InLegalBERT (head+tail)</td>
+  <td>1</td>
+  <td>0.853</td>
+  <td>0.690</td>
+  <td>0.318</td>
+  <td>0.246</td>
+</tr>
+<tr>
+  <td>InLegalBERT (head+tail)</td>
+  <td>2</td>
+  <td>0.602</td>
+  <td>0.611</td>
+  <td>0.370</td>
+  <td>0.300</td>
+</tr>
+<tr>
+  <td>InLegalBERT (head+tail)</td>
+  <td>3</td>
+  <td>0.528</td>
+  <td>0.586</td>
+  <td>0.384</td>
+  <td>0.312</td>
+</tr>
+<tr>
+  <td>InLegalBERT (head+tail)</td>
+  <td>4</td>
+  <td>0.490</td>
+  <td>0.580</td>
+  <td>0.389</td>
+  <td>0.316</td>
+</tr>
+</tbody>
+</table>
+<div class="page-break"></div>
+
+<h2>Appendix B: Label set with BNS mapping</h2>
+<p>All 100 ILSI labels with their training frequency, frequency bucket and BNS counterpart. <em>verified = yes</em> means confirmed by an explicit row of the source table (or ILSI's statute text for repealed sections). Empty BNS cells are mappings withheld because they could not be verified. Notes and sources for every row are in <code>tables/ipc_to_bns_mapping.csv</code>.</p>
+<div class="small-table">
+
+<table>
+<thead>
+<tr>
+  <th>ipc_section</th>
+  <th>ipc_title</th>
+  <th>train_docs</th>
+  <th>bucket</th>
+  <th>bns_sections</th>
+  <th>mapping_type</th>
+  <th>verified</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>2</td>
+  <td>Punishment of offences committed within India</td>
+  <td>343</td>
+  <td>tail</td>
+  <td>1(3)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>Punishment of offences committed beyond, but which by law may be tried within, India</td>
+  <td>1038</td>
+  <td>mid</td>
+  <td>1(4)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>Extension of Code to extra-territorial offences</td>
+  <td>367</td>
+  <td>tail</td>
+  <td>1(5)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>Certain laws not to be affected by this Act</td>
+  <td>454</td>
+  <td>tail</td>
+  <td>1(6)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>13</td>
+  <td>[Repealed] Definition of 'Queen'</td>
+  <td>341</td>
+  <td>tail</td>
+  <td></td>
+  <td>repealed</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>34</td>
+  <td>Acts done by several persons in furtherance of common intention</td>
+  <td>11751</td>
+  <td>head</td>
+  <td>3(5)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>107</td>
+  <td>Abetment of a thing</td>
+  <td>699</td>
+  <td>mid</td>
+  <td>45</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>109</td>
+  <td>Punishment of abetment if the act abetted is committed in consequence and where no express provision is made for its punishment</td>
+  <td>1040</td>
+  <td>mid</td>
+  <td>49</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>114</td>
+  <td>Abettor present when offence is committed</td>
+  <td>350</td>
+  <td>tail</td>
+  <td>54</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>120</td>
+  <td>Concealing design to commit offence punishable with imprisonment</td>
+  <td>823</td>
+  <td>mid</td>
+  <td>60</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>120B</td>
+  <td>Punishment of criminal conspiracy</td>
+  <td>4141</td>
+  <td>head</td>
+  <td>61(2)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>143</td>
+  <td>Punishment (for being member of unlawful assembly)</td>
+  <td>617</td>
+  <td>mid</td>
+  <td></td>
+  <td>unclear</td>
+  <td>no</td>
+</tr>
+<tr>
+  <td>147</td>
+  <td>Punishment for rioting</td>
+  <td>4330</td>
+  <td>head</td>
+  <td>191(2)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>148</td>
+  <td>Rioting, armed with deadly weapon</td>
+  <td>4142</td>
+  <td>head</td>
+  <td>191(3)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>149</td>
+  <td>Every member of unlawful assembly guilty of offence committed in prosecution of common object</td>
+  <td>3822</td>
+  <td>head</td>
+  <td>190</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>155</td>
+  <td>Liability of person for whose benefit riot is committed</td>
+  <td>338</td>
+  <td>tail</td>
+  <td>193(2)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>156</td>
+  <td>Liability of agent of owner or occupier for whose benefit riot is committed</td>
+  <td>665</td>
+  <td>mid</td>
+  <td>193(3)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>161</td>
+  <td>[Repealed] Public servant taking gratification</td>
+  <td>834</td>
+  <td>mid</td>
+  <td></td>
+  <td>repealed</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>164</td>
+  <td>[Repealed] Punishment for abetting offence defined in section 162 or 163 by public servant</td>
+  <td>394</td>
+  <td>tail</td>
+  <td></td>
+  <td>repealed</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>173</td>
+  <td>Preventing service of summons or other proceeding, or preventing publication thereof</td>
+  <td>524</td>
+  <td>tail</td>
+  <td>207</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>174A</td>
+  <td>Non-appearance in response to a proclamation under section 82 of Act 2 of 1974</td>
+  <td>488</td>
+  <td>tail</td>
+  <td>209</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>186</td>
+  <td>Obstructing public servant in discharge of public functions</td>
+  <td>684</td>
+  <td>mid</td>
+  <td>221</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>188</td>
+  <td>Disobedience to order duly promulgated by public servant</td>
+  <td>528</td>
+  <td>tail</td>
+  <td>223</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>190</td>
+  <td>Threat of injury to induce person to refrain from applying for protection to public servant</td>
+  <td>305</td>
+  <td>tail</td>
+  <td>225</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>193</td>
+  <td>Punishment for false evidence</td>
+  <td>470</td>
+  <td>tail</td>
+  <td>229</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>200</td>
+  <td>Using as true such declaration knowing it to be false</td>
+  <td>287</td>
+  <td>tail</td>
+  <td>237</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>201</td>
+  <td>Causing disappearance of evidence of offence, or giving false information to screen offender</td>
+  <td>1911</td>
+  <td>head</td>
+  <td>238</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>228</td>
+  <td>Intentional insult or interruption to public servant sitting in judicial proceeding</td>
+  <td>330</td>
+  <td>tail</td>
+  <td>267</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>229A</td>
+  <td>Failure by person released on bail or bond to appear in Court</td>
+  <td>605</td>
+  <td>mid</td>
+  <td>269</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>279</td>
+  <td>Rash driving or riding on a public way</td>
+  <td>498</td>
+  <td>tail</td>
+  <td>281</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>294</td>
+  <td>Obscene acts and songs</td>
+  <td>3016</td>
+  <td>head</td>
+  <td>296</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>299</td>
+  <td>Culpable homicide</td>
+  <td>385</td>
+  <td>tail</td>
+  <td>100</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>300</td>
+  <td>Murder</td>
+  <td>1483</td>
+  <td>head</td>
+  <td>101</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>302</td>
+  <td>Punishment for murder</td>
+  <td>10391</td>
+  <td>head</td>
+  <td>103(1)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>304</td>
+  <td>Punishment for culpable homicide not amounting to murder</td>
+  <td>3157</td>
+  <td>head</td>
+  <td>105</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>304A</td>
+  <td>Causing death by negligence</td>
+  <td>569</td>
+  <td>mid</td>
+  <td>106(1)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>304B</td>
+  <td>Dowry death</td>
+  <td>1271</td>
+  <td>mid</td>
+  <td>80</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>306</td>
+  <td>Abetment of suicide</td>
+  <td>1714</td>
+  <td>head</td>
+  <td>108</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>307</td>
+  <td>Attempt to murder</td>
+  <td>7124</td>
+  <td>head</td>
+  <td>109</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>308</td>
+  <td>Attempt to commit culpable homicide</td>
+  <td>544</td>
+  <td>mid</td>
+  <td>110</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>313</td>
+  <td>Causing miscarriage without woman's consent</td>
+  <td>821</td>
+  <td>mid</td>
+  <td>89</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>320</td>
+  <td>Grievous hurt</td>
+  <td>566</td>
+  <td>mid</td>
+  <td>116</td>
+  <td>modified</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>323</td>
+  <td>Punishment for voluntarily causing hurt</td>
+  <td>7742</td>
+  <td>head</td>
+  <td>115(2)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>324</td>
+  <td>Voluntarily causing hurt by dangerous weapons or means</td>
+  <td>3662</td>
+  <td>head</td>
+  <td>118(1)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>325</td>
+  <td>Punishment for voluntarily causing grievous hurt</td>
+  <td>2619</td>
+  <td>head</td>
+  <td>117(2)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>326</td>
+  <td>Voluntarily causing grievous hurt by dangerous weapons or means</td>
+  <td>2513</td>
+  <td>head</td>
+  <td>118(2)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>332</td>
+  <td>Voluntarily causing hurt to deter public servant from his duty</td>
+  <td>881</td>
+  <td>mid</td>
+  <td>121(1)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>336</td>
+  <td>Act endangering life or personal safety of others</td>
+  <td>585</td>
+  <td>mid</td>
+  <td>125</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>337</td>
+  <td>Causing hurt by act endangering life or personal safety of others</td>
+  <td>380</td>
+  <td>tail</td>
+  <td>125(a)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>338</td>
+  <td>Causing grievous hurt by act endangering life or personal safety of others</td>
+  <td>319</td>
+  <td>tail</td>
+  <td>125(b)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>341</td>
+  <td>Punishment for wrongful restraint</td>
+  <td>3186</td>
+  <td>head</td>
+  <td>126(2)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>342</td>
+  <td>Punishment for wrongful confinement</td>
+  <td>1086</td>
+  <td>mid</td>
+  <td>127(2)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>353</td>
+  <td>Assault or criminal force to deter public servant from discharge of his duty</td>
+  <td>1279</td>
+  <td>mid</td>
+  <td>132</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>354</td>
+  <td>Assault or criminal force to woman with intent to outrage her modesty</td>
+  <td>2210</td>
+  <td>head</td>
+  <td>74</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>363</td>
+  <td>Punishment for kidnapping</td>
+  <td>1787</td>
+  <td>head</td>
+  <td>137(2)</td>
+  <td>modified</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>364</td>
+  <td>Kidnapping or abducting in order to murder</td>
+  <td>558</td>
+  <td>mid</td>
+  <td>140(1)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>365</td>
+  <td>Kidnapping or abducting with intent secretly and wrongfully to confine person</td>
+  <td>435</td>
+  <td>tail</td>
+  <td>140(3)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>366</td>
+  <td>Kidnapping, abducting or inducing woman to compel her marriage, etc.</td>
+  <td>1433</td>
+  <td>head</td>
+  <td>87</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>366A</td>
+  <td>Procuration of minor girl</td>
+  <td>310</td>
+  <td>tail</td>
+  <td>96</td>
+  <td>modified</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>375</td>
+  <td>Rape</td>
+  <td>358</td>
+  <td>tail</td>
+  <td>63</td>
+  <td>modified</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>376</td>
+  <td>Punishment for rape</td>
+  <td>3728</td>
+  <td>head</td>
+  <td>64</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>379</td>
+  <td>Punishment for theft</td>
+  <td>1662</td>
+  <td>head</td>
+  <td>303(2)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>380</td>
+  <td>Theft in dwelling house, etc.</td>
+  <td>635</td>
+  <td>mid</td>
+  <td>305</td>
+  <td>modified</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>384</td>
+  <td>Punishment for extortion</td>
+  <td>353</td>
+  <td>tail</td>
+  <td>308(2)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>389</td>
+  <td>Putting person in fear of accusation of offence, in order to commit extortion</td>
+  <td>310</td>
+  <td>tail</td>
+  <td>308(7)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>392</td>
+  <td>Punishment for robbery</td>
+  <td>1093</td>
+  <td>mid</td>
+  <td>309(4)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>394</td>
+  <td>Voluntarily causing hurt in committing robbery</td>
+  <td>630</td>
+  <td>mid</td>
+  <td>309(6)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>395</td>
+  <td>Punishment for dacoity</td>
+  <td>644</td>
+  <td>mid</td>
+  <td>310(2)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>397</td>
+  <td>Robbery or dacoity, with attempt to cause death or grievous hurt</td>
+  <td>1362</td>
+  <td>head</td>
+  <td>311</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>406</td>
+  <td>Punishment for criminal breach of trust</td>
+  <td>2305</td>
+  <td>head</td>
+  <td>316(2)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>409</td>
+  <td>Criminal breach of trust by public servant, or by banker, merchant or agent</td>
+  <td>1035</td>
+  <td>mid</td>
+  <td>316(5)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>411</td>
+  <td>Dishonestly receiving stolen property</td>
+  <td>592</td>
+  <td>mid</td>
+  <td>317(2)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>415</td>
+  <td>Cheating</td>
+  <td>319</td>
+  <td>tail</td>
+  <td>318(1)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>417</td>
+  <td>Punishment for cheating</td>
+  <td>486</td>
+  <td>tail</td>
+  <td>318(2)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>419</td>
+  <td>Punishment for cheating by personation</td>
+  <td>533</td>
+  <td>tail</td>
+  <td>319(2)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>420</td>
+  <td>Cheating and dishonestly inducing delivery of property</td>
+  <td>4057</td>
+  <td>head</td>
+  <td>318(4)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>427</td>
+  <td>Mischief causing damage to the amount of fifty rupees</td>
+  <td>1741</td>
+  <td>head</td>
+  <td></td>
+  <td>unclear</td>
+  <td>no</td>
+</tr>
+<tr>
+  <td>436</td>
+  <td>Mischief by fire or explosive substance with intent to destroy house, etc.</td>
+  <td>437</td>
+  <td>tail</td>
+  <td>326(g)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>437</td>
+  <td>Mischief with intent to destroy or make unsafe a decked vessel or one of twenty tons burden</td>
+  <td>577</td>
+  <td>mid</td>
+  <td>327(1)</td>
+  <td>modified</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>438</td>
+  <td>Punishment for the mischief described in section 437 committed by fire or explosive substance</td>
+  <td>1322</td>
+  <td>mid</td>
+  <td>327(2)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>447</td>
+  <td>Punishment for criminal trespass</td>
+  <td>604</td>
+  <td>mid</td>
+  <td>329(3)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>448</td>
+  <td>Punishment for house-trespass</td>
+  <td>982</td>
+  <td>mid</td>
+  <td>329(4)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>450</td>
+  <td>House-trespass in order to commit offence punishable with imprisonment for life</td>
+  <td>272</td>
+  <td>tail</td>
+  <td>332(b)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>452</td>
+  <td>House-trespass after preparation for hurt, assault or wrongful restraint</td>
+  <td>1554</td>
+  <td>head</td>
+  <td>333</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>457</td>
+  <td>Lurking house-trespass or house-breaking by night in order to commit offence punishable with imprisonment</td>
+  <td>365</td>
+  <td>tail</td>
+  <td>331(4)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>465</td>
+  <td>Punishment for forgery</td>
+  <td>609</td>
+  <td>mid</td>
+  <td>336(2)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>467</td>
+  <td>Forgery of valuable security, will, etc.</td>
+  <td>1667</td>
+  <td>head</td>
+  <td>338</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>468</td>
+  <td>Forgery for purpose of cheating</td>
+  <td>2119</td>
+  <td>head</td>
+  <td>336(3)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>471</td>
+  <td>Using as genuine a forged document or electronic record</td>
+  <td>2073</td>
+  <td>head</td>
+  <td>340(2)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>482</td>
+  <td>Punishment for using a false property mark</td>
+  <td>1329</td>
+  <td>head</td>
+  <td>345(3)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>494</td>
+  <td>Marrying again during lifetime of husband or wife</td>
+  <td>310</td>
+  <td>tail</td>
+  <td>82(1)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>498</td>
+  <td>Enticing or taking away or detaining with criminal intent a married woman</td>
+  <td>564</td>
+  <td>mid</td>
+  <td>84</td>
+  <td>modified</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>498A</td>
+  <td>Husband or relative of husband of a woman subjecting her to cruelty</td>
+  <td>3840</td>
+  <td>head</td>
+  <td>85</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>500</td>
+  <td>Punishment for defamation</td>
+  <td>377</td>
+  <td>tail</td>
+  <td>356(2)</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>504</td>
+  <td>Intentional insult with intent to provoke breach of the peace</td>
+  <td>1982</td>
+  <td>head</td>
+  <td>352</td>
+  <td>modified</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>506</td>
+  <td>Punishment for criminal intimidation</td>
+  <td>7899</td>
+  <td>head</td>
+  <td>351(2); 351(3)</td>
+  <td>one_to_many</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>509</td>
+  <td>Word, gesture or act intended to insult the modesty of a woman</td>
+  <td>491</td>
+  <td>tail</td>
+  <td>79</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>511</td>
+  <td>Punishment for attempting to commit offences punishable with imprisonment for life or other imprisonment</td>
+  <td>674</td>
+  <td>mid</td>
+  <td>62</td>
+  <td>one_to_one</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>294(b)</td>
+  <td>Obscene acts and songs: clause (b), obscene songs/words in or near a public place</td>
+  <td>1139</td>
+  <td>mid</td>
+  <td></td>
+  <td>unclear</td>
+  <td>no</td>
+</tr>
+<tr>
+  <td>376(2)</td>
+  <td>Punishment for rape: sub-section (2), aggravated rape</td>
+  <td>473</td>
+  <td>tail</td>
+  <td></td>
+  <td>unclear</td>
+  <td>no</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h2>Appendix C: BNS provisions with no IPC equivalent</h2>
+<p>These provisions are marked as new in the source table; none has training data in ILSI.</p>
+<div class="small-table">
+
+<table>
+<thead>
+<tr>
+  <th>bns_section</th>
+  <th>title</th>
+  <th>status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>48</td>
+  <td>Abetment outside India for offence in India</td>
+  <td>new provision</td>
+</tr>
+<tr>
+  <td>69</td>
+  <td>Sexual intercourse by employing deceitful means etc. (incl. false promise of marriage)</td>
+  <td>new offence</td>
+</tr>
+<tr>
+  <td>95</td>
+  <td>Hiring, employing or engaging a child to commit an offence</td>
+  <td>new offence</td>
+</tr>
+<tr>
+  <td>103(2)</td>
+  <td>Murder by a group of five or more on grounds of race, caste, community, sex, place of birth, language, personal belief ('mob lynching')</td>
+  <td>new sub-clause</td>
+</tr>
+<tr>
+  <td>106(2)</td>
+  <td>Causing death by rash and negligent driving and escaping without reporting ('hit-and-run')</td>
+  <td>new; table notes it was kept on hold, not in force from 1 July 2024</td>
+</tr>
+<tr>
+  <td>111</td>
+  <td>Organised crime</td>
+  <td>new offence</td>
+</tr>
+<tr>
+  <td>112</td>
+  <td>Petty organised crime</td>
+  <td>new offence</td>
+</tr>
+<tr>
+  <td>113</td>
+  <td>Terrorist act</td>
+  <td>new offence</td>
+</tr>
+<tr>
+  <td>117(3)</td>
+  <td>Grievous hurt causing permanent disability or persistent vegetative state</td>
+  <td>new sub-clause</td>
+</tr>
+<tr>
+  <td>117(4)</td>
+  <td>Grievous hurt by a group of five or more on grounds of race, caste, etc.</td>
+  <td>new sub-clause</td>
+</tr>
+<tr>
+  <td>152</td>
+  <td>Act endangering sovereignty, unity and integrity of India</td>
+  <td>described as newly added in the table (often discussed as replacing IPC 124A sedition; not in the ILSI label set)</td>
+</tr>
+<tr>
+  <td>197(1)(d)</td>
+  <td>Making or publishing false or misleading information jeopardising the sovereignty, unity, integrity or security of India</td>
+  <td>new clause</td>
+</tr>
+<tr>
+  <td>226</td>
+  <td>Attempt to commit suicide to compel or restrain exercise of lawful power</td>
+  <td>new offence</td>
+</tr>
+<tr>
+  <td>304</td>
+  <td>Snatching</td>
+  <td>new offence</td>
+</tr>
+<tr>
+  <td>324(3)</td>
+  <td>Mischief causing loss or damage to any property including Government or local authority property</td>
+  <td>new sub-section</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h2>Appendix D: Reproducibility and file index</h2>
+<p>The project repository contains all code. From a fresh checkout with Python 3.11:</p>
+<pre><code>make setup        # virtual environment, pinned packages, Jupyter kernel
+make data         # download ILSI (MD5-checked), inspect, build parquet files
+make eda          # exploratory notebook
+make baselines    # keyword, citation diagnostic, TF-IDF + LR
+make colab-pack   # bundle for Colab; then run colab/train_bert.ipynb (3 runs)
+make compare      # validate all outputs, master table, analysis notebook
+make bns          # IPC -&gt; BNS mapping, coverage, zero-shot retrieval
+make report       # regenerate report figures, tables and REPORT.pdf
+make app          # web demo at http://127.0.0.1:7860
+make test         # unit tests
+</code></pre>
+<p><strong>Contents of this report folder</strong></p>
+<ul>
+<li><code>REPORT.md</code> / <code>REPORT.pdf</code>: this report.</li>
+<li><code>bns_discussion.md</code>: the full IPC → BNS discussion.</li>
+<li><code>figures/</code>: all figures (EDA, results, analysis, BNS, application screenshots).</li>
+<li><code>tables/</code>: every table as CSV, plus Markdown versions:<ul>
+<li>results (<code>results_main</code>, <code>results_all_strategies</code>), <code>bucket_f1</code>, <code>per_label_f1</code>, <code>citation_position</code>, <code>bootstrap</code>, <code>training_log</code>;</li>
+<li>confusion and error-case tables;</li>
+<li>the full IPC → BNS mapping, the new BNS offences, and the label set.</li>
+</ul>
+</li>
+</ul>
+</body></html>
